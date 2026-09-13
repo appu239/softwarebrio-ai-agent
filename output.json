@@ -1,0 +1,51 @@
+[
+  {
+    "company_overview": "Postman is a leading API platform that streamlines the entire API lifecycle, from development to collaboration. It enables developers and enterprises to build, test, and distribute APIs faster and with higher quality.",
+    "target_audience": "API developers, engineering teams, and enterprises seeking to design, test, and manage APIs efficiently.",
+    "contact_points": [
+      "info@postman.com",
+      "info-jp@postman.com"
+    ],
+    "leadership": [
+      {
+        "name": "Abhinav Asthana",
+        "role": "CEO and co-founder",
+        "linkedin_url": null
+      },
+      {
+        "name": "Ankit Sobti",
+        "role": "Co-founder",
+        "linkedin_url": null
+      },
+      {
+        "name": "Abhijit Kane",
+        "role": "Co-founder",
+        "linkedin_url": null
+      }
+    ],
+    "confidence_score": 0.85,
+    "domain": "https://postman.com"
+  },
+  {
+    "company_overview": "Supabase is an open‑source, Postgres‑based development platform that bundles managed database, authentication, storage, real‑time, edge functions, and AI integrations into a single product. It empowers developers, startups, and enterprises to rapidly build and scale applications without managing infrastructure.",
+    "target_audience": "Developers, startups, and enterprise teams building web, mobile, or AI applications who need a managed Postgres backend with built‑in authentication, storage, real‑time sync, and AI‑friendly services.",
+    "contact_points": [],
+    "leadership": [],
+    "confidence_score": 0.7,
+    "domain": "https://supabase.com"
+  },
+  {
+    "company_overview": "Vapi empowers businesses to build, deploy, and improve voice agents rapidly using a unified platform that handles orchestration, real-time monitoring, and enterprise‑grade configurability. The platform supports high‑volume calls, integrates with telephony, and offers compliance features such as SOC 2, HIPAA, and PCI, making it suitable for Fortune 100 enterprises.",
+    "target_audience": "Large enterprises and mission‑critical organizations requiring scalable, compliant voice AI agents for customer support, appointment scheduling, and other conversational use cases.",
+    "contact_points": [],
+    "leadership": [
+      {
+        "name": "Jason Mitura",
+        "role": "VP of Software Development",
+        "linkedin_url": null
+      }
+    ],
+    "confidence_score": 0.65,
+    "domain": "https://vapi.ai"
+  }
+]
