@@ -2,26 +2,36 @@
 
 **Practical Assessment Submission | SoftwareBrio AI Engineer Intern**
 
-An autonomous Python agent designed to extract structured company intelligence and B2B sales leads from target company websites. Built with **Playwright**, **BeautifulSoup4**, **Groq API** (`openai/gpt-oss-20b`), and **Pydantic**.
+An autonomous, fault-tolerant Python agent designed to extract structured company intelligence, leadership details, and B2B sales leads from target company websites. Built with **Playwright**, **BeautifulSoup4**, **Tavily Search API**, **Groq API** (`openai/gpt-oss-20b`), and **Pydantic v2**.
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Key Features](#key-features)
+- [Assignment Objective](#assignment-objective)
 - [Architecture & Workflow](#architecture--workflow)
 - [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
-- [Python Modules Explanation](#python-modules-explanation)
-- [Token Optimization Strategies](#token-optimization-strategies)
-- [Structured LLM Output & Validation](#structured-llm-output--validation)
-- [Error Handling & Resilience](#error-handling--resilience)
+- [Module Responsibilities](#module-responsibilities)
+- [Core Engineering Features](#core-engineering-features)
+  - [Playwright Dynamic Browsing](#playwright-dynamic-browsing)
+  - [Relevant Internal Page Discovery](#relevant-internal-page-discovery)
+  - [BeautifulSoup HTML Cleaning](#beautifulsoup-html-cleaning)
+  - [Token Optimization & Context Limits](#token-optimization--context-limits)
+  - [Tavily External Search Integration](#tavily-external-search-integration)
+  - [Groq LLM Extraction & JSON Schema Output](#groq-llm-extraction--json-schema-output)
+  - [Pydantic Data Validation](#pydantic-data-validation)
+  - [Leadership Evidence Validation](#leadership-evidence-validation)
+  - [Token Usage & Cost Tracking](#token-usage--cost-tracking)
+  - [Fault-Tolerant Pipeline](#fault-tolerant-pipeline)
 - [Target Companies](#target-companies)
 - [Example Output Structure](#example-output-structure)
-- [Setup & Installation (Windows)](#setup--installation-windows)
+- [Setup & Installation](#setup--installation)
+- [Environment Variables](#environment-variables)
 - [Running the Project](#running-the-project)
-- [Security Note](#security-note)
+- [Independent Testing](#independent-testing)
+- [Security & Credential Protection](#security--credential-protection)
 - [Future Improvements](#future-improvements)
 - [Author](#author)
 
@@ -29,20 +39,26 @@ An autonomous Python agent designed to extract structured company intelligence a
 
 ## Overview
 
-The **Autonomous Lead Enrichment Agent** automatically scrapes target company domains, handles JavaScript-rendered web pages, navigates to key internal pages (About, Team, Leadership, Contact, Pricing), cleans HTML content, and leverages Groq's fast LLM inference to extract high-value company insights. The agent outputs structured, schema-validated JSON containing company descriptions, Ideal Customer Profiles (ICP), generic email contacts, leadership details, and confidence ratings.
+The **Autonomous Lead Enrichment Agent** automates B2B sales lead discovery and company research. Given target company domains, the agent:
+1. Launches headless Playwright Chromium to handle dynamic JavaScript-rendered pages.
+2. Discovers relevant internal subpages (`about`, `team`, `leadership`, `contact`, `pricing`, `company`).
+3. Cleans HTML content while preserving contact details and mailto email links.
+4. Executes targeted supplementary web searches via **Tavily API** for company and leadership LinkedIn context.
+5. Merges website context and external search evidence up to a strict 16,000 character limit.
+6. Queries **Groq LLM** (`openai/gpt-oss-20b`) enforcing JSON Schema structured output.
+7. Validates response schemas using **Pydantic v2** and verifies leadership entries against raw evidence.
+8. Tracks total token consumption and API costs, saving output to `output.json`.
 
 ---
 
-## Key Features
+## Assignment Objective
 
-- **Automated Page Discovery**: Analyzes homepages and automatically discovers high-priority internal pages based on relevant URL keywords (`about`, `team`, `leadership`, `contact`, `pricing`, `company`).
-- **Dynamic Content Scraping**: Leverages **Playwright** (Headless Chromium) to render JavaScript-heavy web applications.
-- **HTML Content Cleaning**: Uses **BeautifulSoup4** to remove non-informational elements including `<script>`, `<style>`, `<svg>`, `<noscript>`, `<nav>`, `<header>`, and `<footer>`.
-- **Token Optimization**: Enforces both per-page character limits (4,000 chars) and cumulative payload limits (16,000 chars) prior to LLM submission.
-- **Structured JSON Extractions**: Uses Groq API with `openai/gpt-oss-20b` configured with `json_schema` response formatting.
-- **Pydantic Validation**: Validates LLM outputs against predefined Python schemas (`CompanyIntelligence`, `LeadershipMember`) with range checks for confidence scores.
-- **Fault-Tolerant Pipeline**: Uses granular error handling so individual page or domain failures are captured without unnecessarily stopping processing of other targets.
-- **JSON File Output**: Consolidates enrichment records across all processed target domains into a clean `output.json` file.
+Developed for the **SoftwareBrio AI Engineer Intern Assessment**, this project demonstrates:
+- End-to-end web scraping resilience and dynamic page navigation.
+- Efficient token optimization and context window management.
+- Grounded structured LLM extraction without hallucinations.
+- Strict Pydantic type validation and multi-pass evidence verification.
+- Transparent token usage and operational cost tracking.
 
 ---
 
@@ -50,42 +66,35 @@ The **Autonomous Lead Enrichment Agent** automatically scrapes target company do
 
 ```mermaid
 flowchart TD
-    A[Target Domains List] --> B[Playwright Scraper]
-    B --> C[Scrape Homepage & Discover Internal Links]
-    C --> D[Filter Links by Keywords: about, team, contact, etc.]
-    D --> E[Scrape Discovered Pages]
-    E --> F[BeautifulSoup Text Cleaning & DOM Stripping]
-    F --> G[Apply Per-Page & Total Content Limits]
-    G --> H[Groq LLM API - gpt-oss-20b]
-    H --> I[Structured JSON Output Schema]
-    I --> J[Pydantic Validation - CompanyIntelligence]
-    J --> K[Append to Output Array]
-    K --> L[Save Results to output.json]
+    A[Target Domains List] --> B[Playwright Headless Chromium]
+    B --> C[Scrape Homepage & Discover Links]
+    C --> D[Filter Internal Subpages: about, team, contact, pricing, etc.]
+    D --> E[Scrape & Extract Page Content]
+    E --> F[BS4 Cleaning & Mailto/LinkedIn Extraction]
+    F --> G[Tavily External Search: LinkedIn / CEO / CTO Queries]
+    G --> H[Deduplicate & Rank Search Results]
+    H --> I[Combine Evidence & Enforce 16k Char Cap]
+    I --> J[Groq API - gpt-oss-20b JSON Schema Output]
+    J --> K[Pydantic Validation - CompanyIntelligence]
+    K --> L[Evidence Validation: Verify Name, Role & LinkedIn]
+    L --> M[Token & Cost Accounting]
+    M --> N[Save Output to output.json]
 ```
-
-### Execution Flow Step-by-Step
-
-1. **Domain Input**: Receives target URLs (`main.py`).
-2. **Browsing & Discovery**: Playwright launches headless Chromium to load the homepage, waits for `domcontentloaded`, and inspects all `<a>` tags matching relevant internal keywords (`scraper.py`).
-3. **Scraping & Cleaning**: Each page is fetched, stripped of scripts, styles, navigation, headers, and footers, and truncated to 4,000 characters.
-4. **Context Aggregation**: Scraped page contents are aggregated into a single prompt payload capped at 16,000 characters total.
-5. **LLM Extraction**: Content is submitted to Groq (`openai/gpt-oss-20b`) enforcing structured JSON response schemas (`llm_extractor.py`).
-6. **Schema Validation**: Output is validated using Pydantic models (`models.py`).
-7. **Storage**: Final structured data is saved to `output.json`.
 
 ---
 
 ## Technology Stack
 
-| Component | Tool / Library | Description |
+| Component | Technology | Role / Purpose |
 | :--- | :--- | :--- |
-| **Language** | Python 3.10+ | Core programming environment |
-| **Web Automation** | Playwright (Chromium) | Headless browser execution & dynamic DOM handling |
-| **HTML Parser** | BeautifulSoup4 | HTML element removal and clean text extraction |
-| **LLM Provider** | Groq API | High-speed LLM inference endpoint |
-| **LLM Model** | `openai/gpt-oss-20b` | Open-source model for structured company intelligence extraction |
-| **Data Validation** | Pydantic v2 | Data modeling, validation, and JSON schema generation |
-| **Config Management** | `python-dotenv` | Environment variable management for API keys |
+| **Language** | Python 3.10+ | Core implementation language |
+| **Web Automation** | Playwright (Chromium) | Dynamic DOM rendering & link navigation |
+| **HTML Sanitization** | BeautifulSoup4 | Removal of scripts/styles while preserving text & contact info |
+| **External Search** | Tavily API (`tavily-python`) | Supplementary web search for company & leadership LinkedIn info |
+| **LLM Provider** | Groq API (`groq`) | High-speed LLM inference |
+| **LLM Model** | `openai/gpt-oss-20b` | Structured company intelligence extraction |
+| **Data Validation** | Pydantic v2 (`pydantic`) | Data schemas, type validation, and JSON schema generation |
+| **Environment Management** | `python-dotenv` | Secure API key management |
 
 ---
 
@@ -93,109 +102,79 @@ flowchart TD
 
 ```
 softwarebrio-ai-agent/
-│
-├── main.py              # Agent entry point & orchestration pipeline
-├── scraper.py           # Playwright scraper, link discovery & BS4 HTML cleaner
-├── llm_extractor.py     # Groq API client & Pydantic structured response handler
+├── main.py              # Pipeline orchestration, context building, validation & output writer
+├── scraper.py           # Playwright headless browser, link discovery, BS4 text cleaning & mailto links
+├── search_agent.py      # Tavily search integration, relevance scoring, and deduplication
+├── llm_extractor.py     # Groq API client, structured JSON schema response, token & cost tracking
 ├── models.py            # Pydantic data schemas (CompanyIntelligence, LeadershipMember)
-├── test_browser.py      # Independent test script for Playwright web scraping
-├── test_model.py        # Independent test script for Pydantic schema validation
-├── requirements.txt     # Python package dependencies
-├── output.json          # Formatted JSON output containing lead enrichment results
+├── test_browser.py      # Test script for Playwright navigation & text preview
+├── test_model.py        # Test script for Pydantic schema serialization
+├── requirements.txt     # Direct Python dependencies
+├── output.json          # Formatted JSON results with company intelligence & cost summary
 ├── .env.example        # Environment variable template
-└── .gitignore           # Git ignore file (excludes venv, .env, __pycache__)
+└── .gitignore           # Git ignore file (venv, .env, __pycache__, *.pyc)
 ```
 
 ---
 
-## Python Modules Explanation
+## Module Responsibilities
 
-### `main.py`
-The orchestration script that manages the lead enrichment workflow:
-- Iterates over the `TARGET_DOMAINS` list.
-- Calls `scrape_company()` to retrieve clean content from target homepages and internal subpages.
-- Aggregates page contents up to a `MAX_TOTAL_CHARS` limit (16,000 characters).
-- Sends aggregated text to `extract_company_intelligence()`.
-- Captures individual domain failures safely into the results array.
-- Writes the combined results to `output.json`.
-
-### `scraper.py`
-Handles web scraping and webpage content sanitization:
-- **`scrape_company(domain)`**: Launches a headless Playwright Chromium browser, scrapes the homepage, calls `discover_pages()`, and scrapes all relevant internal subpages.
-- **`discover_pages(page, homepage_url)`**: Inspects anchor tags on the homepage, checks if links match internal domain rules, and filters URLs based on key terms (`about`, `company`, `team`, `leadership`, `contact`, `pricing`).
-- **`scrape_page(page, url)`**: Navigates to a URL with a 30-second timeout, extracts HTML, and applies cleaning and per-page content limits.
-- **`clean_text(html)`**: Uses `BeautifulSoup` to decompose non-content tags (`script`, `style`, `svg`, `noscript`, `nav`, `footer`, `header`) and returns stripped plain text.
-
-### `llm_extractor.py`
-Manages interaction with the Groq LLM API:
-- Loads `GROQ_API_KEY` from environment variables using `python-dotenv`.
-- Formulates extraction system and user prompts with explicit strict grounding rules.
-- Invokes `client.chat.completions.create()` using model `openai/gpt-oss-20b` and `json_schema` response format derived from `CompanyIntelligence.model_json_schema()`.
-- Parses returned JSON text and validates it against `CompanyIntelligence` using `model_validate()`.
-
-### `models.py`
-Defines the Pydantic data models for structured outputs:
-- **`LeadershipMember`**: Models team members with `name`, `role`, and optional `linkedin_url` (default `None`).
-- **`CompanyIntelligence`**: Models the overall enrichment schema:
-  - `company_overview`: Concise 2-sentence description.
-  - `target_audience`: Ideal Customer Profile (ICP).
-  - `contact_points`: List of generic public email addresses.
-  - `leadership`: List of `LeadershipMember` objects.
-  - `confidence_score`: Float between `0.0` and `1.0` (enforced via `ge=0.0, le=1.0`).
-
-### `test_browser.py`
-A lightweight verification script to test Playwright browser launching, page navigation, and DOM text preview independently.
-
-### `test_model.py`
-A verification script to test Pydantic schema instantiation and JSON serialization (`model_dump_json()`) without making live API calls.
+- **`main.py`**: Coordinates domain processing pipeline (`run_agent`), aggregates website and search contexts (`build_company_context`, `build_external_search_context`), collects deterministic metadata, verifies leadership against raw evidence (`validate_leadership_against_evidence`), calculates total cost summary (`create_cost_summary`), and exports to `output.json`.
+- **`scraper.py`**: Manages Playwright Chromium headless instances (`scrape_company`), navigates internal links (`discover_pages`), cleans HTML by removing script/style/svg/noscript elements (`clean_text`), extracts mailto email addresses, and extracts visible LinkedIn profile context (`extract_page_links`, `extract_linkedin_context`).
+- **`search_agent.py`**: Executes targeted Tavily queries for company, CEO, and CTO LinkedIn references (`search_company_externally`), assigns priority relevance scores (`calculate_result_priority`), and deduplicates results (`clean_search_results`).
+- **`llm_extractor.py`**: Formulates structured extraction prompts for Groq's `openai/gpt-oss-20b` model enforcing JSON Schema format (`CompanyIntelligence.model_json_schema()`), parses output, validates Pydantic model (`model_validate`), and calculates estimated API costs per domain.
+- **`models.py`**: Defines Pydantic v2 models `LeadershipMember` (with `linkedin_url` string defaulting to `""` if unavailable) and `CompanyIntelligence` (with numeric range check `confidence_score` between `0.0` and `1.0`).
+- **`test_browser.py`**: Independent browser verification script for page navigation and text extraction preview.
+- **`test_model.py`**: Independent schema validation script verifying Pydantic model initialization and serialization.
 
 ---
 
-## Token Optimization Strategies
+## Core Engineering Features
 
-To reduce token consumption, decrease API costs, and fit within LLM context windows, the agent implements multi-stage content reduction:
+### Playwright Dynamic Browsing
+Handles single-page applications (SPAs) and JavaScript-heavy websites using headless Chromium. Waits for `domcontentloaded` with network idle fallback to accommodate persistent web sockets.
 
-1. **Targeted Page Discovery**: Rather than crawling entire domains, `scraper.py` filters links by specific high-value keywords (`about`, `company`, `team`, `leadership`, `contact`, `pricing`).
-2. **DOM Decomposition (`clean_text`)**: Removes heavy HTML boilerplate, scripts, CSS stylesheets, inline SVGs, navigation menus, headers, and footers prior to text extraction.
-3. **Per-Page Character Cap**: Truncates scraped page text at **4,000 characters** per page (`MAX_PAGE_CHARS = 4000`), appending `[Content truncated]` if threshold is exceeded.
-4. **Cumulative Payload Cap**: Limits total aggregated text sent to the LLM per company to **16,000 characters** (`MAX_TOTAL_CHARS = 16000`) across all discovered pages combined.
+### Relevant Internal Page Discovery
+Analyzes homepages to discover internal subpages matching target keywords (`about`, `company`, `team`, `leadership`, `contact`, `pricing`). Ensures only same-domain HTTP/HTTPS links without fragment identifiers are crawled.
 
----
+### BeautifulSoup HTML Cleaning
+Strips non-content tags (`<script>`, `<style>`, `<svg>`, `<noscript>`) while explicitly preserving header, body, and footer structures where contact information and public emails reside. Converts HTML into cleaned plain text.
 
-## Structured LLM Output & Pydantic Validation
+### Token Optimization & Context Limits
+- **Per-Page Cap**: Truncates individual page text at **4,000 characters**.
+- **Cumulative Context Cap**: Limits aggregate context (website content + external search evidence) sent to the LLM to **16,000 characters**.
 
-The system improves output consistency by combining Groq structured JSON responses with Pydantic validation.
+### Tavily External Search Integration
+Performs external searches via Tavily for company LinkedIn presence, CEO LinkedIn, and CTO LinkedIn. Search results are deduplicated by URL, scored by keyword relevance, truncated to 700 characters per item, and appended to the LLM context as supplementary evidence.
 
-1. **Schema Export**: Pydantic generates a JSON Schema from `CompanyIntelligence.model_json_schema()`.
-2. **Groq Structured Outputs**: Passed to `client.chat.completions.create` via `response_format`:
-   ```python
-   response_format={
-       "type": "json_schema",
-       "json_schema": {
-           "name": "company_intelligence",
-           "strict": False,
-           "schema": CompanyIntelligence.model_json_schema()
-       }
-   }
-   ```
-3. **Runtime Validation**: The raw JSON output string is parsed and validated via `CompanyIntelligence.model_validate(result)` to validate data types, field names, and range bounds.
+### Groq LLM Extraction & JSON Schema Output
+Utilizes Groq API with `openai/gpt-oss-20b` configured with strict `json_schema` response formatting derived directly from Pydantic schemas. System prompts strictly mandate grounding in provided evidence only.
 
----
+### Pydantic Data Validation
+Enforces strict schema validation at runtime:
+- `name`: Full string name.
+- `role`: Title or function.
+- `linkedin_url`: Valid URL string, or empty string `""` if unavailable (not `None`).
+- `confidence_score`: Float constrained between `0.0` and `1.0` (`ge=0.0, le=1.0`).
 
-## Error Handling & Resilience
+### Leadership Evidence Validation
+To eliminate LLM hallucinations, `validate_leadership_against_evidence()` runs post-extraction checks:
+1. Requires full names (minimum 2 words).
+2. Verifies that candidate name and role string exist within raw source evidence.
+3. Rejects company LinkedIn pages (`/company/`) listed as personal LinkedIn profiles.
+4. Strips unsupported or hallucinated LinkedIn URLs.
 
-The pipeline is designed to execute robustly without stopping on isolated errors:
+### Token Usage & Cost Tracking
+Calculates estimated USD API costs based on Groq pricing rates for `openai/gpt-oss-20b` ($0.075 per 1M input tokens, $0.30 per 1M output tokens). Aggregates per-company metrics into a global `cost_summary` in `output.json`.
 
-- **Browser & Network Failures**: `scrape_page()` catches navigation timeouts or rendering exceptions per page and returns a fallback dict containing the error message.
-- **Link Discovery Guard**: `discover_pages()` catches individual link parsing exceptions in a `try/except` block, preventing broken URLs from interrupting link discovery.
-- **Pipeline Continuity**: `run_agent()` wraps company enrichment in a top-level `try/except` block. If scraping or LLM extraction fails for one company, the agent logs the error, records `{"domain": domain, "error": str(e)}`, and continues to the next company.
-- **Environment Validation**: `llm_extractor.py` checks for the presence of `GROQ_API_KEY` upon initialization and raises a clear `ValueError` if the key is missing.
+### Fault-Tolerant Pipeline
+Individual page timeouts, network errors, or search failures are caught gracefully per page and domain, ensuring the pipeline finishes processing remaining targets without crashing.
 
 ---
 
 ## Target Companies
 
-The agent currently enriches intelligence for the following target companies:
+Default target domains configured in `main.py`:
 1. `https://postman.com`
 2. `https://supabase.com`
 3. `https://vapi.ai`
@@ -204,49 +183,64 @@ The agent currently enriches intelligence for the following target companies:
 
 ## Example Output Structure
 
-Below is an example of the enriched company data saved in `output.json`:
+The output generated by the agent is saved to `output.json` in the following validated format:
 
 ```json
-[
-  {
-    "company_overview": "Postman is a leading API platform that streamlines the entire API lifecycle, from development to collaboration. It enables developers and enterprises to build, test, and distribute APIs faster and with higher quality.",
-    "target_audience": "API developers, engineering teams, and enterprises seeking to design, test, and manage APIs efficiently.",
-    "contact_points": [
-      "info@postman.com",
-      "info-jp@postman.com"
-    ],
-    "leadership": [
-      {
-        "name": "Abhinav Asthana",
-        "role": "CEO and co-founder",
-        "linkedin_url": null
-      },
-      {
-        "name": "Ankit Sobti",
-        "role": "Co-founder",
-        "linkedin_url": null
-      },
-      {
-        "name": "Abhijit Kane",
-        "role": "Co-founder",
-        "linkedin_url": null
+{
+  "results": [
+    {
+      "company_overview": "Postman is a leading API platform that helps developers design, build, test, and document APIs with ease. It provides a suite of tools and AI‑enabled features for API lifecycle management across individuals, teams, and enterprises.",
+      "target_audience": "Developers, API teams, and enterprises building, testing, and managing APIs.",
+      "contact_points": [
+        "accommodations@postman.com",
+        "info-jp@postman.com",
+        "info@postman.com"
+      ],
+      "leadership": [
+        {
+          "name": "Abhinav Asthana",
+          "role": "CEO/Co-Founder",
+          "linkedin_url": "https://www.linkedin.com/in/abhinavasthana"
+        },
+        {
+          "name": "Ankit Sobti",
+          "role": "CTO/Co-Founder",
+          "linkedin_url": "https://www.linkedin.com/in/ankit-sobti"
+        },
+        {
+          "name": "Abhijit Kane",
+          "role": "Product Architect/Co-Founder",
+          "linkedin_url": "https://in.linkedin.com/in/abhijitkane"
+        }
+      ],
+      "confidence_score": 0.8,
+      "domain": "https://postman.com",
+      "usage": {
+        "model": "openai/gpt-oss-20b",
+        "input_tokens": 4132,
+        "output_tokens": 839,
+        "total_tokens": 4971,
+        "estimated_cost_usd": 0.0005616
       }
-    ],
-    "confidence_score": 0.85,
-    "domain": "https://postman.com"
+    }
+  ],
+  "cost_summary": {
+    "successful_companies": 3,
+    "total_input_tokens": 13647,
+    "total_output_tokens": 2860,
+    "total_tokens": 16507,
+    "estimated_total_cost_usd": 0.00188152
   }
-]
+}
 ```
 
 ---
 
-## Setup & Installation (Windows)
-
-Follow these steps to set up and run the project on Windows.
+## Setup & Installation
 
 ### Prerequisites
-- **Python 3.10+** installed
-- **Git** installed
+- **Python 3.10+**
+- **Git**
 
 ### 1. Clone the Repository
 ```powershell
@@ -270,61 +264,62 @@ pip install -r requirements.txt
 playwright install chromium
 ```
 
-### 5. Configure Environment Variables
-Create a `.env` file in the project root directory:
+---
+
+## Environment Variables
+
+Create a `.env` file in the project root directory using `.env.example` as a template:
 
 ```env
 GROQ_API_KEY=your_groq_api_key_here
+TAVILY_API_KEY=your_tavily_api_key_here
 ```
-
-> **Note**: Replace `your_groq_api_key_here` with your actual Groq API key from [Groq Console](https://console.groq.com/).
 
 ---
 
 ## Running the Project
 
-### Execute Main Lead Enrichment Agent
-Run the primary pipeline to scrape all target domains and generate `output.json`:
+Run the main pipeline to scrape target domains, perform external searches, invoke LLM extraction, and generate `output.json`:
 
 ```powershell
 python main.py
 ```
 
-### Run Test Scripts (Optional)
-To test browser scraping independently:
-```powershell
-python test_browser.py
-```
+---
 
-To test Pydantic data model validation independently:
-```powershell
-python test_model.py
-```
+## Independent Testing
+
+Run lightweight test scripts to verify individual components:
+
+- **Browser & Scraping Verification**:
+  ```powershell
+  python test_browser.py
+  ```
+- **Pydantic Schema Serialization Verification**:
+  ```powershell
+  python test_model.py
+  ```
 
 ---
 
-## Security Note
+## Security & Credential Protection
 
-> [!IMPORTANT]
-> **API Key Protection**: Secrets such as `GROQ_API_KEY` are stored in `.env` and must **never** be committed to Git repositories. The `.gitignore` file is configured to exclude `.env` and the `venv/` directory.
+- API credentials (`GROQ_API_KEY` and `TAVILY_API_KEY`) are stored strictly in `.env`.
+- `.gitignore` is configured to prevent committing `.env`, `venv/`, `__pycache__/`, or `*.pyc` files.
+- Real API keys are never printed, exposed in logs, or checked into version control.
 
 ---
 
 ## Future Improvements
 
-Potential enhancements planned for future iterations:
-
-- **Search Engine & External APIs**: Integrate Tavily or SerpAPI for search-based lead discovery when direct website navigation yields minimal details.
-- **LinkedIn Enrichment**: Add targeted LinkedIn search APIs to populate missing executive profile URLs.
-- **Advanced Agent Orchestration**: Integrate LangGraph or Browser-Use for autonomous multi-step decision-making and deep web browsing.
-- **Data Export Formats**: Support CSV, Excel, and CRM integrations (HubSpot/Salesforce).
-- **Cost & Token Tracking**: Implement real-time token tracking and estimated API cost reporting per run.
-- **Asynchronous Scraping**: Convert sync Playwright to `asyncio` for parallel multi-domain scraping.
+- **Asynchronous Scraping**: Refactor sync Playwright calls to `asyncio` + `async_playwright` for parallel domain processing.
+- **Export Formats**: Add CSV and Excel export options alongside JSON.
+- **CRM Integration**: Direct export hooks for HubSpot and Salesforce lead generation.
+- **Deep LinkedIn API Integration**: Targeted LinkedIn API lookups for executive verification.
 
 ---
 
 ## Author
 
-**Aparna C**
-
-MCA Graduate | Software Engineering | AI/ML
+**Aparna C**  
+Software Engineering | AI/ML | MCA Graduate  

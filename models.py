@@ -1,14 +1,28 @@
-from pydantic import BaseModel, Field
-from typing import List
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LeadershipMember(BaseModel):
-    name: str
-    role: str
-    linkedin_url: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(
+        description="Full name of the leadership or team member."
+    )
+
+    role: str = Field(
+        description="Job title or role of the leadership or team member."
+    )
+
+    linkedin_url: str = Field(
+        description=(
+            "LinkedIn profile URL if explicitly found in the website content. "
+            "Use an empty string if unavailable."
+        )
+    )
 
 
 class CompanyIntelligence(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     company_overview: str = Field(
         description="A concise two-sentence overview of the company."
     )
@@ -17,18 +31,24 @@ class CompanyIntelligence(BaseModel):
         description="The company's target audience or ideal customer profile."
     )
 
-    contact_points: List[str] = Field(
-        default_factory=list,
-        description="Generic or public email addresses found on the website."
+    contact_points: list[str] = Field(
+        description=(
+            "Generic or public email addresses explicitly found "
+            "in the website content."
+        )
     )
 
-    leadership: List[LeadershipMember] = Field(
-        default_factory=list,
-        description="Important leadership or team members discovered."
+    leadership: list[LeadershipMember] = Field(
+        description=(
+            "Important leadership or team members discovered "
+            "in the website content."
+        )
     )
 
     confidence_score: float = Field(
         ge=0.0,
         le=1.0,
-        description="Confidence in the extracted information, from 0.0 to 1.0."
+        description=(
+            "Confidence in the extracted information, from 0.0 to 1.0."
+        )
     )
